@@ -4,73 +4,40 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HTTPMR - Security Scanner</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: #f6f8fb;
-            color: #1f2937;
-            min-height: 100vh;
-            padding: 24px;
-        }
-
-        .container { max-width: 1100px; margin: 0 auto; }
-
-        header { background: #ffffff; border-radius: 8px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 6px 16px rgba(16,24,40,0.06); }
-
-        h1 { color: #111827; margin-bottom: 6px; font-size: 1.6rem; }
-        .subtitle { color: #4b5563; font-size: 0.95rem; }
-
-        .card { background: #fff; border-radius: 8px; padding: 18px; margin-bottom: 18px; box-shadow: 0 6px 18px rgba(16,24,40,0.04); }
-
-        .card h2 { color: #111827; margin-bottom: 14px; font-size: 1.15rem; border-bottom: 1px solid #eef2f7; padding-bottom: 8px; }
-
-        .form-group { margin-bottom: 14px; }
-        label { display: block; margin-bottom: 6px; color: #374151; font-weight: 600; font-size: 0.95rem; }
-
-        input[type="text"], select { width: 100%; padding: 10px 12px; border: 1px solid #e6eef6; border-radius: 6px; font-size: 0.95rem; }
-        input[type="text"]:focus, select:focus { outline: none; border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59,130,246,0.08); }
-
-        input[type="file"] { padding: 8px 10px; }
-
-        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
-
-        button, .btn { padding: 10px 18px; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
-        .btn-primary { background: #2563eb; color: white; }
-        .btn-secondary { background: #f3f4f6; color: #111827; }
-        .btn-danger { background: #ef4444; color: white; }
-        .btn-success { background: #16a34a; color: white; }
-        .btn-primary:hover { filter: brightness(1.03); }
-
-        .reports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
-
-        .report-card { background: #fff; border-radius: 8px; padding: 14px; box-shadow: 0 6px 18px rgba(16,24,40,0.04); border-left: 4px solid #2563eb; }
-        .report-title { font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 0.95rem; }
-        .report-meta { font-size: 0.85rem; color: #6b7280; margin-bottom: 8px; }
-        .report-url { color: #2563eb; font-weight: 600; margin-bottom: 8px; }
-
-        .severity-badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700; }
-        .severity-high { background: #fff4f4; color: #b91c1c; }
-        .severity-low { background: #f0fdf4; color: #166534; }
-
-        .two-column { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-        @media (max-width: 768px) { .two-column { grid-template-columns: 1fr; } .reports-grid { grid-template-columns: 1fr; } }
-    </style>
-    </style>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HTTPMR Design System -->
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🔍 HTTPMR Security Scanner</h1>
-            <p class="subtitle">HTTP & Web Vulnerability Assessment Tool</p>
+        <header class="dashboard-header">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1><i class="fas fa-search"></i> HTTPMR Security Scanner</h1>
+                    <p class="subtitle">HTTP & Web Vulnerability Assessment Tool</p>
+                </div>
+                <div class="user-info">
+                    <div id="settings-status" style="margin-right: 10px;">
+                        <!-- Settings status will be loaded here -->
+                    </div>
+                    <a href="/settings" class="btn btn-secondary btn-sm" style="text-decoration: none;">
+                        <i class="fas fa-user-cog"></i> {{ username }}
+                    </a>
+                    <form method="post" action="/logout" style="margin: 0;">
+                        <button type="submit" class="btn btn-danger btn-sm">Sign Out</button>
+                    </form>
+                </div>
+            </div>
         </header>
 
-        <div class="two-column">
+        <div class="grid grid-cols-2" style="margin-bottom: var(--space-xl);">
             <!-- Left Column: Scan Controls -->
-            <div>
+            <div class="flex flex-col gap-lg">
                 <div class="card">
-                    <h2>🚀 Start New Scan</h2>
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-rocket"></i> Start New Scan</h2>
+                    </div>
                     <form id="scanForm">
                         <div class="form-group">
                             <label for="target">Target (host or URL)</label>
@@ -85,20 +52,22 @@
                                 <option value="server">Server Detection Only</option>
                             </select>
                         </div>
-                        <div class="button-group">
+                        <div class="flex gap-md">
                             <button type="submit" class="btn btn-primary">Start Scan</button>
                         </div>
                     </form>
                 </div>
 
                 <div class="card">
-                    <h2>📤 Upload Report</h2>
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-upload"></i> Upload Report</h2>
+                    </div>
                     <form id="uploadForm" enctype="multipart/form-data">
                         <div class="form-group">
                             <label for="file">Choose JSON Report</label>
                             <input type="file" id="file" name="file" accept="application/json" required />
                         </div>
-                        <div class="button-group">
+                        <div class="flex gap-md">
                             <button type="submit" class="btn btn-secondary">Upload</button>
                         </div>
                     </form>
@@ -106,29 +75,31 @@
             </div>
 
             <!-- Right Column: Recent Reports -->
-            <div>
+            <div class="flex flex-col gap-lg">
                 <div class="card">
-                    <h2>📋 Recent Reports</h2>
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-clipboard-list"></i> Recent Reports</h2>
+                    </div>
                     {% if reports %}
                         <div style="max-height: 600px; overflow-y: auto;">
                             {% for item in reports[:5] %}
-                                <div style="padding: 12px 0; border-bottom: 1px solid #eee;">
+                                <a class="recent-report" href="/view?name={{ item.filename }}">
                                     <div class="report-title">{{ item.filename }}</div>
                                     {% if item.summary.url %}
                                         <div class="report-url">{{ item.summary.url }}</div>
                                     {% endif %}
                                     {% if item.summary.vuln_count %}
-                                        <span class="severity-badge severity-high">{{ item.summary.vuln_count }} Vulnerabilities</span>
+                                        <span class="badge badge-danger">{{ item.summary.vuln_count }} Vulnerabilities</span>
                                     {% else %}
-                                        <span class="severity-badge severity-low">Clean</span>
+                                        <span class="badge badge-success">Clean</span>
                                     {% endif %}
-                                    <div style="margin-top: 8px; font-size: 0.85em; color: #999;">{{ item.summary.timestamp }}</div>
-                                </div>
+                                    <div style="margin-top: var(--space-sm); font-size: 0.875em; color: var(--text-muted);">{{ item.summary.timestamp }}</div>
+                                </a>
                             {% endfor %}
                         </div>
                     {% else %}
                         <div class="empty-state">
-                            <div class="empty-state-icon">📭</div>
+                            <i class="fas fa-inbox"></i>
                             <p>No reports yet</p>
                         </div>
                     {% endif %}
@@ -137,45 +108,73 @@
         </div>
 
         <!-- All Reports Section -->
-        <div class="card">
-            <h2>📊 All Reports</h2>
-            {% if reports %}
-                <div class="reports-grid">
-                    {% for item in reports %}
-                        <div class="report-card">
-                            <div class="report-title">{{ item.filename }}</div>
-                            {% if item.summary.url %}
-                                <div class="report-url">{{ item.summary.url }}</div>
-                            {% endif %}
-                            {% if item.summary.timestamp %}
-                                <div class="report-meta">📅 {{ item.summary.timestamp }}</div>
-                            {% endif %}
-                            {% if item.summary.vuln_count %}
-                                <span class="severity-badge severity-high">{{ item.summary.vuln_count }} Vulns</span>
-                            {% else %}
-                                <span class="severity-badge severity-low">Clean</span>
-                            {% endif %}
-                            {% if item.summary.security_score %}
-                                <span class="severity-badge" style="background: #f3e5f5; color: #6a1b9a;">Score: {{ item.summary.security_score }}</span>
-                            {% endif %}
-                            <div class="report-actions">
-                                <a href="/view?name={{ item.filename }}" class="btn btn-primary">View</a>
-                                <button class="btn btn-success" onclick="convertSarif('{{ item.filename }}')">SARIF</button>
-                                <button class="btn btn-danger" onclick="deleteReport('{{ item.filename }}')">Delete</button>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-state">
-                    <div class="empty-state-icon">📭</div>
-                    <p>No reports found. Start a scan or upload one to get started!</p>
-                </div>
-            {% endif %}
+        <div id="allReportsContainer">
+            {% include 'partials/all_reports.html' %}
         </div>
     </div>
 
+    <!-- HTTPMR UI JavaScript -->
+    <script src="/static/js/ui.js"></script>
     <script>
+        // Load settings status
+        async function loadSettingsStatus() {
+            try {
+                const response = await fetch('/api/settings/status');
+                if (response.ok) {
+                    const status = await response.json();
+                    const statusDiv = document.getElementById('settings-status');
+                    
+                    let statusHtml = '';
+                    
+                    // Real-time scans indicator
+                    if (status.real_time_scans_enabled) {
+                        statusHtml += '<span class="badge badge-success" title="Real-time scans enabled"><i class="fas fa-bolt"></i> Real-time</span> ';
+                    }
+                    
+                    // API keys indicators with rate limit status
+                    if (status.has_nvd_key) {
+                        const nvdStatus = status.rate_limits?.nvd;
+                        const nvdClass = nvdStatus?.available ? 'badge-success' : 
+                                       nvdStatus?.in_cooldown ? 'badge-warning' : 'badge-danger';
+                        const nvdTitle = nvdStatus ? 
+                            `NVD API: ${nvdStatus.requests_last_minute}/${nvdStatus.limit_per_minute} per minute, ${nvdStatus.requests_last_hour}/${nvdStatus.limit_per_hour} per hour` :
+                            'NVD API configured';
+                        statusHtml += `<span class="badge ${nvdClass}" title="${nvdTitle}"><i class="fas fa-shield-alt"></i> NVD</span> `;
+                    }
+                    
+                    if (status.has_exploitdb_key) {
+                        const exploitStatus = status.rate_limits?.exploitdb;
+                        const exploitClass = exploitStatus?.available ? 'badge-success' : 
+                                          exploitStatus?.in_cooldown ? 'badge-warning' : 'badge-danger';
+                        const exploitTitle = exploitStatus ? 
+                            `ExploitDB API: ${exploitStatus.requests_last_minute}/${exploitStatus.limit_per_minute} per minute, ${exploitStatus.requests_last_hour}/${exploitStatus.limit_per_hour} per hour` :
+                            'ExploitDB API configured';
+                        statusHtml += `<span class="badge ${exploitClass}" title="${exploitTitle}"><i class="fas fa-database"></i> ExploitDB</span> `;
+                    }
+                    
+                    if (status.has_vulndb_key) {
+                        const vulnStatus = status.rate_limits?.vulndb;
+                        const vulnClass = vulnStatus?.available ? 'badge-success' : 
+                                       vulnStatus?.in_cooldown ? 'badge-warning' : 'badge-danger';
+                        const vulnTitle = vulnStatus ? 
+                            `VulnDB API: ${vulnStatus.requests_last_minute}/${vulnStatus.limit_per_minute} per minute, ${vulnStatus.requests_last_hour}/${vulnStatus.limit_per_hour} per hour` :
+                            'VulnDB API configured';
+                        statusHtml += `<span class="badge ${vulnClass}" title="${vulnTitle}"><i class="fas fa-exclamation-triangle"></i> VulnDB</span> `;
+                    }
+                    
+                    // Show cooldown warning if any API is in cooldown
+                    const inCooldown = Object.values(status.rate_limits || {}).some(api => api.in_cooldown);
+                    if (inCooldown) {
+                        statusHtml += '<span class="badge badge-warning" title="One or more APIs are in rate limit cooldown"><i class="fas fa-clock"></i> Cooldown</span> ';
+                    }
+                    
+                    statusDiv.innerHTML = statusHtml;
+                }
+            } catch (error) {
+                console.error('Failed to load settings status:', error);
+            }
+        }
+        
         const scanForm = document.getElementById('scanForm');
         const uploadForm = document.getElementById('uploadForm');
 
@@ -243,6 +242,44 @@
                 })
                 .catch(e => alert('Conversion failed: ' + e.message));
         }
+
+        const allReportsContainer = document.getElementById('allReportsContainer');
+
+        async function updateAllReports(sortValue) {
+            if (!allReportsContainer) return;
+            allReportsContainer.classList.add('loading');
+            try {
+                const res = await fetch(`/reports_fragment?sort=${encodeURIComponent(sortValue)}`, {
+                    headers: {
+                        'X-Requested-With': 'fetch'
+                    }
+                });
+                if (!res.ok) {
+                    throw new Error('Failed to load reports');
+                }
+                const html = await res.text();
+                allReportsContainer.innerHTML = html;
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('sort', sortValue);
+                window.history.replaceState({}, '', url);
+            } catch (err) {
+                alert(err.message || 'Unable to update reports');
+            } finally {
+                allReportsContainer.classList.remove('loading');
+            }
+        }
+
+        if (allReportsContainer) {
+            allReportsContainer.addEventListener('change', (event) => {
+                if (event.target && event.target.id === 'reportSortSelect') {
+                    updateAllReports(event.target.value);
+                }
+            });
+        }
+        
+        // Load settings status when page loads
+        document.addEventListener('DOMContentLoaded', loadSettingsStatus);
     </script>
 </body>
 </html>

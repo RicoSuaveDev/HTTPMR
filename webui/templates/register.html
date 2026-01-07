@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HTTPMR - Register</title>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- HTTPMR Design System -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <h1><i class="fas fa-user-plus"></i> Create Account</h1>
+            <p>Security Scanner Registration</p>
+        </div>
+
+        {% if error %}
+            <div class="alert alert-error">{{ error }}</div>
+        {% endif %}
+
+        {% if success %}
+            <div class="alert alert-success">{{ success }}</div>
+        {% endif %}
+
+        <div class="alert alert-info">
+            <strong>Password requirements:</strong>
+            <ul style="margin: var(--space-sm) 0; padding-left: var(--space-lg);">
+                <li>At least 8 characters</li>
+                <li>Username at least 3 characters</li>
+            </ul>
+        </div>
+
+        <form method="post" action="/register" class="auth-form">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Choose a username (min. 3 chars)" required autofocus />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter password (min. 8 chars)" required />
+            </div>
+
+            <div class="form-group">
+                <label for="password_confirm">Confirm Password</label>
+                <input type="password" id="password_confirm" name="password_confirm" placeholder="Confirm your password" required />
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+        </form>
+
+        <div class="auth-links">
+            Already have an account? <a href="/login">Sign in</a>
+        </div>
+    </div>
+
+    <!-- HTTPMR UI JavaScript -->
+    <script src="/static/js/ui.js"></script>
+</body>
+</html>
