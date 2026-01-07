@@ -521,7 +521,7 @@ def analyze_security_headers(url, verbose=False):
     return headers_analysis
 
 def detect_wordpress(url):
-    """Detect if the site is running WordPress."""
+    """Detect if the site is running WordPress with multiple fallback methods."""
     wordpress_indicators = {
         "wp_content": False,
         "wp_includes": False,
@@ -529,7 +529,10 @@ def detect_wordpress(url):
         "wordpress_theme": None,
         "admin_panel": False,
         "wp_json": False,
-        "is_wordpress": False
+        "wp_cookies": False,
+        "wp_json_api_version": None,
+        "is_wordpress": False,
+        "detection_method": []
     }
     
     try:
@@ -537,45 +540,91 @@ def detect_wordpress(url):
         if not url.startswith(("http://", "https://")):
             url = "https://" + url
         
-        # Check for WordPress indicator paths
-        resp = requests.get(url, timeout=5)
-        html = resp.text.lower()
-        headers = resp.headers
-        
-        # Check for WordPress content indicators
-        if "wp-content" in html or "/wp-content/" in html:
-            wordpress_indicators["wp_content"] = True
-        if "wp-includes" in html or "/wp-includes/" in html:
-            wordpress_indicators["wp_includes"] = True
-        
-        # Check for WordPress version in meta or comments
-        version_match = re.search(r'content=["\']?(.?\d+\.\d+(\.\d+)?)["\']?\s+name=["\']?generator["\']?|<meta name=[\'\"]?generator[\'\"]? content=[\'"]?WordPress ([\d.]+)', html, re.IGNORECASE)
-        if version_match:
-            wordpress_indicators["wordpress_version"] = version_match.group(1) or version_match.group(3)
-        
-        # Check for WordPress theme
-        theme_match = re.search(r'/wp-content/themes/([a-z0-9-]+)/', html)
-        if theme_match:
-            wordpress_indicators["wordpress_theme"] = theme_match.group(1)
-        
-        # Check for WordPress admin
-        if "/wp-admin/" in html:
-            wordpress_indicators["admin_panel"] = True
-        
-        # Check for WordPress JSON API
+        # PRIMARY METHOD 1: Check /wp-json/wp/v2/ endpoint (most reliable)
         try:
-            json_resp = requests.get(f"{url}/wp-json/wp/v2/", timeout=5)
+            json_resp = requests.get(f"{url}/wp-json/wp/v2/", timeout=5, allow_redirects=True)
             if json_resp.status_code == 200:
                 wordpress_indicators["wp_json"] = True
+                wordpress_indicators["detection_method"].append("wp-json-endpoint")
+                try:
+                    json_data = json_resp.json()
+                    if 'wordpress' in json_resp.text.lower() or 'wp' in json_resp.text.lower():
+                        wordpress_indicators["is_wordpress"] = True
+                except:
+                    pass
+        except requests.Timeout:
+            pass
+        except requests.ConnectionError:
+            pass
+        except Exception:
+            pass
+        
+        # SECONDARY METHOD 2: Check homepage for WordPress indicators
+        try:
+            resp = requests.get(url, timeout=5, allow_redirects=True)
+            html = resp.text.lower()
+            headers = resp.headers
+            
+            # Check for WordPress content indicators
+            if "wp-content" in html or "/wp-content/" in html:
+                wordpress_indicators["wp_content"] = True
+                wordpress_indicators["detection_method"].append("wp-content-path")
+            if "wp-includes" in html or "/wp-includes/" in html:
+                wordpress_indicators["wp_includes"] = True
+                wordpress_indicators["detection_method"].append("wp-includes-path")
+            
+            # Check for WordPress version in meta or comments
+            version_match = re.search(r'content=["\']?(.?\d+\.\d+(\.\d+)?)["\']?\s+name=["\']?generator["\']?|<meta name=[\'\"]?generator[\'\"]? content=[\'"]?WordPress ([\d.]+)', html, re.IGNORECASE)
+            if version_match:
+                wordpress_indicators["wordpress_version"] = version_match.group(1) or version_match.group(3)
+                wordpress_indicators["detection_method"].append("meta-generator")
+            
+            # Check for WordPress theme
+            theme_match = re.search(r'/wp-content/themes/([a-z0-9-]+)/', html)
+            if theme_match:
+                wordpress_indicators["wordpress_theme"] = theme_match.group(1)
+            
+            # Check for WordPress admin
+            if "/wp-admin/" in html:
+                wordpress_indicators["admin_panel"] = True
+                wordpress_indicators["detection_method"].append("wp-admin-path")
+            
+        except requests.Timeout:
+            pass
+        except requests.ConnectionError:
+            pass
+        except Exception:
+            pass
+        
+        # TERTIARY METHOD 3: Check for WordPress-specific cookies
+        try:
+            resp = requests.get(url, timeout=5, allow_redirects=True)
+            wp_cookies = [c for c in resp.cookies if 'wordpress' in c.lower() or 'wp_' in c.lower()]
+            if wp_cookies:
+                wordpress_indicators["wp_cookies"] = True
+                wordpress_indicators["detection_method"].append("wp-cookies")
         except:
             pass
         
-        # Determine if WordPress - include version detection as indicator
+        # FALLBACK METHOD 4: Try direct version.php probe (fallback)
+        try:
+            version_resp = requests.get(f"{url}/wp-includes/version.php", timeout=5)
+            if version_resp.status_code == 200 and "wp_version" in version_resp.text:
+                version_match = re.search(r'\$wp_version\s*=\s*[\'"]([^\'"]+)[\'"]', version_resp.text)
+                if version_match:
+                    wordpress_indicators["wordpress_version"] = version_match.group(1)
+                    wordpress_indicators["detection_method"].append("version-php-probe")
+        except:
+            pass
+        
+        # Determine if WordPress - prioritize by impact
         wordpress_indicators["is_wordpress"] = (
+            wordpress_indicators["wp_json"] or 
             wordpress_indicators["wp_content"] or 
-            wordpress_indicators["wp_includes"] or 
-            wordpress_indicators["wp_json"] or
-            wordpress_indicators["wordpress_version"] is not None
+            wordpress_indicators["wp_includes"] or
+            wordpress_indicators["wordpress_version"] is not None or
+            wordpress_indicators["wp_cookies"] or
+            wordpress_indicators["admin_panel"]
         )
         
         return wordpress_indicators
@@ -814,8 +863,18 @@ def auto_mode_test(url, verbose=False, output_file=None):
                 print(f"  ⚠️  Found {len(indicators)} potential issue(s)")
             else:
                 print(f"  ✓ No obvious vulnerabilities detected")
+        except requests.Timeout:
+            print(f"  {Color.YELLOW}⏱ Request timeout (target slow or unreachable){Color.RESET}")
+            auto_results["tests"]["general_vulns"] = []
+        except requests.ConnectionError:
+            print(f"  {Color.RED}✗ Connection failed (unable to reach target){Color.RESET}")
+            auto_results["tests"]["general_vulns"] = []
+        except requests.exceptions.InvalidURL:
+            print(f"  {Color.RED}✗ Invalid URL format{Color.RESET}")
+            auto_results["tests"]["general_vulns"] = []
         except Exception as e:
-            print(f"  - Skipped: {str(e)}")
+            print(f"  {Color.YELLOW}⚠ Skipped: {str(e)}{Color.RESET}")
+            auto_results["tests"]["general_vulns"] = []
     
     # 3. Server & Port Detection
     print(f"\n{Color.BOLD}[3/5] Server & Port Detection...{Color.RESET}")
