@@ -5,6 +5,7 @@ set -euo pipefail
 # Creates a .venv if missing, installs requirements, then runs the FastAPI WebUI
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT_DIR"
 VENV_DIR="$ROOT_DIR/.venv"
 REQUIREMENTS="$ROOT_DIR/requirements.txt"
 
