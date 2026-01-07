@@ -1,5 +1,5 @@
 .DS_Store
 reports/
 .secure/httpmr.db
-.secure/settings.config
+.secure/seetings.config.backup
 __pycache__
